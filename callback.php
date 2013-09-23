@@ -1,4 +1,13 @@
-<?php 
+<?php
+
+function addParamToURL($url, $key, $value) {
+	$query = parse_url($url, PHP_URL_QUERY);
+	if ($query)
+		return $url."&$key=$value";
+	else
+		return $url."?$key=$value";
+}
+
 // show/hide errors
 ini_set('display_errors', '1');
 
@@ -136,14 +145,14 @@ if (isset($_POST)){
 		printr("Error in form");
 	}
 	printr("Redirecting back")
-;	echo '<a href="'.$_SERVER['HTTP_REFERER'].'">Or click here to go back now';
+;	echo '<a href="'.addParamToURL($_SERVER['HTTP_REFERER'], 'success', 'true').'">Or click here to go back now';
 }
 
 ?>
 
 <script type="text/JavaScript">
 redirectTime = "0";
-redirectURL = "<?php echo $_SERVER['HTTP_REFERER']; ?>";
+redirectURL = "<?php echo addParamToURL($_SERVER['HTTP_REFERER'], 'success', 'true'); ?>";
 function timedRedirect() {
 	setTimeout("location.href = redirectURL;",redirectTime);
 }
