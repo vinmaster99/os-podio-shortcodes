@@ -1,0 +1,14 @@
+
+.os_podioform > fieldset label{
+	float:left;
+	clear:both;
+}
+.os_podioform > fieldset input[type="text"], 
+.os_podioform > fieldset textarea{
+	float:left;
+	clear:both;
+}
+.os_podioform > fieldset input[type="submit"]{
+	float:left;
+	clear:both;
+}
