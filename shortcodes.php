@@ -20,12 +20,13 @@ function onescreen_podioform($atts, $content = null){
 	extract(shortcode_atts( 
 		array('form_app' => OS_PODIO_LEADS_APP,
 			'discovery_source_app' => OS_PODIO_SOURCE_APP,
-			'discovery_source_item' => 'none',
+			'discovery_source_item' => 'none', //none means this is a contact form instead of whitepapers
 			'download_link' => 'none',
 			'submit_text' => 'Submit'), $atts));
 
 	$form_html = '';
 
+	// Display a success message if form submission is a success
 	if ($_GET['success'] == 'true')
 		$form_html .= '<div id="success" style="display:none;" >true</div>';
 
@@ -44,9 +45,6 @@ function onescreen_podioform($atts, $content = null){
 			// get leads app podio webform and generate custom html/css styles
 			$podioforms = PodioForm::get_for_app($form_app);
 			$fields = $podioforms[0]->fields;
-			// printr($fields);
-			// printr($podioforms);
-			// $item = PodioItem::get(94);
 
 			// form must not be empty (must have at least 1 field)
 			if (count($fields) > 0){
@@ -58,11 +56,10 @@ function onescreen_podioform($atts, $content = null){
 					// checking settings field for 'contact_field_types' array (to generate textbox for app field type 'contact')
 					if (!empty($field['settings']['contact_field_types'])) $contact_field_types = $field['settings']['contact_field_types'];
 
-					// get podio app field object
+					// get list of podio app object
 					$appfield_object = PodioAppField::get($form_app, $field_id);
-					// printr($appfield_object);
 
-					$att = $appfield_object->__attributes;	// grab attributes
+					$att = $appfield_object->__attributes;	// grab list of form fields
 					$external_id = $att['external_id'];
 					$type = $att['type'];
 					$label = $att['config']['label'];
@@ -72,14 +69,8 @@ function onescreen_podioform($atts, $content = null){
 					switch ($type){
 						case 'text' : 
 						$size = $att['config']['settings']['size'];
-						// Task requires company field not displayed 2nd time
-						// if ( stripos('small', $size) !== false ){
-						// 	$form_html .= '<label style="text-transform:capitalize;">' . $label . '</label>';
-						// 	$form_html .= '<input type="text" name="'.$field_id.'" '.$required.' />';
-						// }
-						// elseif ( stripos('large', $size) !== false ){
+						// Large size text is a textarea
 						if ( stripos('large', $size) !== false ){
-							// $desc_text = '<label style="text-transform:capitalize;">' . $label . '</label>';
 							$desc_text = '<label style="text-transform:capitalize;">' . 'How Can We Help?' . '</label>';
 							$desc_text .= '<textarea name="'.$field_id.'" style="width:95%;" required></textarea>';
 						}
@@ -88,8 +79,10 @@ function onescreen_podioform($atts, $content = null){
 						if (isset($contact_field_types)){
 								// print_r($contact_field_types);
 							foreach ($contact_field_types as $contact_label){
+								// Add e to show email instead of mail
 								if ( stripos('mail', $contact_label) !== false )
 									$form_html .= '<label style="text-transform:capitalize;">e' . $contact_label . '</label>';
+								// Show custom text for organization
 								else if ( stripos('organization', $contact_label) !== false )
 									$form_html .= '<label style="text-transform:capitalize;">' . 'Company' . '</label>';
 								else
@@ -106,15 +99,17 @@ function onescreen_podioform($atts, $content = null){
 						break;
 					}
 				}
+
+				// Only show textarea for contact forms
 				if ($discovery_source_item == 'none')
 					$form_html .= $desc_text;
 
+				// Setup for callback.php
 				$form_html .= '<input type="hidden" name="os_podio_app_id" value="'.$form_app.'" />';
 				$form_html .= '<input type="hidden" name="discovery_source_app" value="'.$discovery_source_app.'" />';
 				$form_html .= '<input type="hidden" name="discovery_source_item" value="'.$discovery_source_item.'" />';
 				$form_html .= '<input type="hidden" name="download_link" value="'.$download_link.'" />';
 
-				// $form_html .= '<input class="os-btn btn-large os-green" type="submit" value="'.$podioforms[0]->__attributes['settings']['text']['submit'].'" />';
 				$form_html .= '<input class="os-btn btn-large os-green" type="submit" value="'.$submit_text.'" />';
 				// close form tags
 				$form_html .= '</fieldset></form></div>';
