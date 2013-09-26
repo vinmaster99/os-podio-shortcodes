@@ -22,7 +22,8 @@ function onescreen_podioform($atts, $content = null){
 			'discovery_source_app' => OS_PODIO_SOURCE_APP,
 			'discovery_source_item' => 'none', //none means this is a contact form instead of whitepapers
 			'download_link' => 'none',
-			'submit_text' => 'Submit'), $atts));
+			'submit_text' => 'Submit',
+			'ga_action' => ''), $atts));
 
 	$form_html = '';
 
@@ -45,7 +46,10 @@ function onescreen_podioform($atts, $content = null){
 			// form must not be empty (must have at least 1 field)
 			if (count($fields) > 0){
 				// start form tags
-				$form_html .= '<div class="span12"><form class="os_podioform" method="POST" action="javascript: checkForm()" ><fieldset>';
+				if (!isset($ga_action) && $ga_action != '')
+					$form_html .= '<div class="span12"><form class="os_podioform" method="POST" action="javascript: checkForm()" ><fieldset>';
+				else
+					$form_html .= '<div class="span12"><form class="os_podioform" id="'.$ga_action.'" method="POST" action="javascript: checkForm()" ><fieldset>';
 
 				foreach ($fields as $field){
 					$field_id = $field['field_id'];
@@ -130,7 +134,10 @@ jQuery(document).ready(function($) {
 		// event.preventDefault();
 		if ($('[name="download_link"]').length) {
 			window.open('files/'+$('[name="download_link"]').val(),'_blank');
-			_gaq.push(['_trackEvent', 'download', 'whitepaper', $('[name="download_link"]').val(),, false]);
+			if ($('.os_podioform')[0].id.length)
+				_gaq.push(['_trackEvent', 'download', $('.os_podioform')[0].id, $('[name="download_link"]').val(),, false]);
+			else
+				_gaq.push(['_trackEvent', 'download', 'pdf', $('[name="download_link"]').val(),, false]);
 		} else {
 			_gaq.push(['_trackEvent', 'contact', 'submit', 'form',, false]);
 		}
