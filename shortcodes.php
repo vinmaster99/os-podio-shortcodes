@@ -129,20 +129,6 @@ add_action('wp_enqueue_scripts', 'podio_whitepaper_javascript');
 function podio_whitepaper_javascript() {
 ?>
 <script type="text/javascript">
-jQuery(document).ready(function($) {
-	$(".os-btn").click(function(event){
-		// event.preventDefault();
-		if ($('[name="download_link"]').length) {
-			window.open('files/'+$('[name="download_link"]').val(),'_blank');
-			if ($('.os_podioform')[0].id.length)
-				_gaq.push(['_trackEvent', 'download', $('.os_podioform')[0].id, $('[name="download_link"]').val(),, false]);
-			else
-				_gaq.push(['_trackEvent', 'download', 'pdf', $('[name="download_link"]').val(),, false]);
-		} else {
-			_gaq.push(['_trackEvent', 'contact', 'submit', 'form',, false]);
-		}
-	});
-});
 var checkForm = function(){
 	var ajaxurl = '<?php echo admin_url("admin-ajax.php"); ?>';
 	var form = $(".os_podioform :input");
@@ -166,6 +152,16 @@ var checkForm = function(){
 		$(".alert-success").hide();
 		$(".alert-error").fadeIn();
 	});
+
+	if ($('[name="download_link"]').length) {
+		window.open('files/'+$('[name="download_link"]').val(),'_blank');
+		if ($('.os_podioform')[0].id.length)
+			_gaq.push(['_trackEvent', 'download', $('.os_podioform')[0].id, $('[name="download_link"]').val(),, false]);
+		else
+			_gaq.push(['_trackEvent', 'download', 'pdf', $('[name="download_link"]').val(),, false]);
+	} else {
+		_gaq.push(['_trackEvent', 'contact', 'submit', 'form',, false]);
+	}
 };
 </script>
 <?php
