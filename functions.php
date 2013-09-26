@@ -29,4 +29,13 @@ if (!function_exists('stripallslashes')){
 	}
 }
 
+// Utility function to add parameters to urls
+function addParamToURL($url, $key, $value) {
+	$query = parse_url($url, PHP_URL_QUERY);
+	if ($query)
+		return $url."&$key=$value";
+	else
+		return $url."?$key=$value";
+}
+
 ?>

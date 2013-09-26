@@ -1,14 +1,5 @@
 <?php
 
-// Utility function to add parameters to urls
-function addParamToURL($url, $key, $value) {
-	$query = parse_url($url, PHP_URL_QUERY);
-	if ($query)
-		return $url."&$key=$value";
-	else
-		return $url."?$key=$value";
-}
-
 // show/hide errors
 ini_set('display_errors', '1');
 
@@ -103,11 +94,11 @@ if (isset($_POST)){
 		}
  	}
 	catch(PodioError $e){
-		// printr($e);
-		printr("Error in form");
+		echo "error";
+		die();
 	}
-	printr("Redirecting back")
-;	echo '<a href="'.addParamToURL($_SERVER['HTTP_REFERER'], 'success', 'true').'">Or click here to go back now';
+	echo "success";
+	die();
 }
 
 ?>

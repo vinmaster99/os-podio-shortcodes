@@ -26,20 +26,16 @@ function onescreen_podioform($atts, $content = null){
 
 	$form_html = '';
 
-	// Display a success message if form submission is a success
-	if ($_GET['success'] == 'true')
-		$form_html .= '<div id="success" style="display:none;" >true</div>';
-
 	// check shortcode attributes for required values (app name / app id, etc..)
 	if (!isset($form_app) || !isset($discovery_source_app) || !isset($discovery_source_item) || $discovery_source_item == '') 
 		return $os_error['missing_app'] . $content;
 
-	// apps check here 
+	// apps check here
 	if ( $form_app ){
 		try{
 			$credentials = array();
-			$credentials['username'] = USERNAME;
-			$credentials['password'] = PASSWORD;
+			$credentials['username'] = PODIOUSERNAME;
+			$credentials['password'] = PODIOPASSWORD;
 			Podio::authenticate('password', $credentials);
 
 			// get leads app podio webform and generate custom html/css styles
@@ -49,7 +45,7 @@ function onescreen_podioform($atts, $content = null){
 			// form must not be empty (must have at least 1 field)
 			if (count($fields) > 0){
 				// start form tags
-				$form_html .= '<div class="span12"><form class="os_podioform" method="POST" action="'.plugins_url('callback.php', __FILE__).'" ><fieldset>';
+				$form_html .= '<div class="span12"><form class="os_podioform" method="POST" action="javascript: checkForm()" ><fieldset>';
 
 				foreach ($fields as $field){
 					$field_id = $field['field_id'];
@@ -108,7 +104,8 @@ function onescreen_podioform($atts, $content = null){
 				$form_html .= '<input type="hidden" name="os_podio_app_id" value="'.$form_app.'" />';
 				$form_html .= '<input type="hidden" name="discovery_source_app" value="'.$discovery_source_app.'" />';
 				$form_html .= '<input type="hidden" name="discovery_source_item" value="'.$discovery_source_item.'" />';
-				$form_html .= '<input type="hidden" name="download_link" value="'.$download_link.'" />';
+				if ($download_link != 'none')
+					$form_html .= '<input type="hidden" name="download_link" value="'.$download_link.'" />';
 
 				$form_html .= '<input class="os-btn btn-large os-green" type="submit" value="'.$submit_text.'" />';
 				// close form tags
@@ -117,10 +114,156 @@ function onescreen_podioform($atts, $content = null){
 			}
 		}
 		catch(PodioError $e){
-			printr($e);
+			// printr($e);
+			return "Error showing the form";
 		}
 	}
 }
 add_shortcode('os_podioform', 'onescreen_podioform');
+
+add_action('wp_enqueue_scripts', 'podio_whitepaper_javascript');
+function podio_whitepaper_javascript() {
+?>
+<script type="text/javascript">
+jQuery(document).ready(function($) {
+	$(".os-btn").click(function(event){
+		// event.preventDefault();
+		if ($('[name="download_link"]').length) {
+			window.open('files/'+$('[name="download_link"]').val(),'_blank');
+			_gaq.push(['_trackEvent', 'download', 'whitepaper', $('[name="download_link"]').val(),, false]);
+		} else {
+			_gaq.push(['_trackEvent', 'contact', 'submit', 'form',, false]);
+		}
+	});
+});
+var checkForm = function(){
+	var ajaxurl = '<?php echo admin_url("admin-ajax.php"); ?>';
+	var form = $(".os_podioform :input");
+	var fields_array = ["Discovery Source", "contact[mail]", "contact[name]", "contact[organization]", "contact[phone]", "contact[title]", "discovery_source_app", "discovery_source_item", "download_link", "os_podio_app_id"];
+	var data = {action: 'podio_whitepaper'};
+
+	$.each(fields_array, function(index, value){
+		data[(form[index]).name] = $(form[index]).val();
+	});
+
+	// $(".os_podioform :input").each(function(){
+	// 	data[this.name] = $(this).val();
+	// });
+	$.post(ajaxurl, data, function(response) {
+		console.log(response);
+		if (response == 'Success')
+			$(".alert-success").fadeIn();
+		else
+			$(".alert-error").fadeIn();
+	}).fail(function() {
+		$(".alert-success").hide();
+		$(".alert-error").fadeIn();
+	});
+};
+</script>
+<?php
+}
+
+}
+
+add_action('wp_ajax_podio_whitepaper', 'podio_whitepaper_callback');
+if(!function_exists('podio_whitepaper_callback')) {
+function podio_whitepaper_callback() {
+// show/hide errors
+ini_set('display_errors', '1');
+
+if (isset($_POST)){
+	// parameter array that we send to podio
+	$args = array();
+	$app_id;
+	$contact_args = array( );
+
+	// get post values and set up args to send to podio
+	foreach ($_POST as $key => $value){
+		if (!empty($value)){
+			// if value is app id then store variable and skip
+			if ( stripos('os_podio_app_id', $key) !== false ) {
+				$app_id = $value;
+				continue;
+			}
+
+			// for now assuming value is a string
+			if (is_string($value)) $value = stripallslashes($value);
+			elseif (is_array($value) && stripos('contact', $key) !== false){
+				if (empty($contact_args)) {
+					$contact_args = $value;
+					$args['fields'][$key] = null;
+				}
+			}
+
+			// The second organization field is not set but still want to set the data
+			if ($key == 'contact' && isset($value['organization'])) {
+				// Submit organization name for 2 fields
+				$args['fields']['14771676'] = $value['organization'];
+			}
+
+			// Get values to set up for podio query
+			if ($key == 'action' || $key == ' ') {
+				// do nothing, this is for ajax param
+			} else if ($key == 'download_link') {
+				$download_link = $value;
+			} else if ($key == 'discovery_source_app') {
+				$discovery_source_app = $value;
+			} else if ($key == 'discovery_source_item') {
+				$discovery_source_item = $value;
+			} else if ($key == 'Discovery_Source') {
+				$discovery_source_field_id = $value;
+			} else {
+				// add value to args array
+				$args['fields'][$key] = $value;
+			}
+		}
+	}
+
+	// This is a whitepaper form so need to fetch reference id
+	if (isset($discovery_source_item) && $discovery_source_item != 'none') {
+		Podio::authenticate('app', array('app_id'=>OS_PODIO_SOURCE_APP,'app_token'=>OS_PODIO_SOURCE_APP_TOKEN));
+
+		$discovery_source = PodioItem::get_by_app_item_id($discovery_source_app,$discovery_source_item);
+		$test_values = array();
+		$attributes = $discovery_source->__attributes;
+		$discovery_source_item_id = $attributes['item_id'];
+	}
+
+	// Set up contact fields
+	if (array_key_exists('phone', $contact_args)) {
+		$contact_args['phone'] = array($contact_args['phone']);
+		$contact_args['title'] = array($contact_args['title']);
+		$contact_args['mail'] = array($contact_args['mail']);
+		$contact_args['external_id'] = 'contact';
+	}
+
+	try{
+		Podio::authenticate('app', array('app_id'=>OS_PODIO_LEADS_APP,'app_token'=>OS_PODIO_LEADS_APP_TOKEN));
+
+		$space_id = BUSINESS_DEV_WORKSPACE_ID;
+		// Create the contact and get contact id
+		$contact_id = PodioContact::create( $space_id, $contact_args );
+
+		if (isset($app_id) && isset($contact_id) && isset($discovery_source_item)){
+			$args['fields']['contact'] = $contact_id;
+			if ($discovery_source_item != 'none') // reference for discovery source
+				$args['fields'][$discovery_source_field_id] = $discovery_source_item_id;
+			// Create item
+			$item_id = PodioItem::create($app_id, $args);
+			echo "Success";
+			die();
+		}
+ 	}
+	catch(PodioError $e){
+		echo "Error submitting form";
+		die();
+	}
+	echo "Form not submitted";
+	die();
+}
+
+}
+
 }
 ?>
