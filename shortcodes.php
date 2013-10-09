@@ -269,4 +269,168 @@ if (isset($_POST)){
 }
 
 }
+
+// ----------------------------------------------------------------
+
+// Shortcode 
+if(!function_exists('product_demo_form')) {
+function product_demo_form($atts, $content = null){
+	global $os_error;
+
+	// return error if there no attributes
+	if (empty($atts)) return $os_error['missing_attributes'] . $content;
+
+	extract($atts);
+	extract(shortcode_atts( 
+		array('form_app' => OS_PODIO_LEADS_APP,
+			'discovery_source_app' => OS_PODIO_SOURCE_APP,
+			'discovery_source_item' => 'none', //none means this is a contact form instead of whitepapers
+			'download_link' => 'none',
+			'submit_text' => 'Submit',
+			'ga_action' => ''), $atts));
+
+	$form_html = '';
+
+	// check shortcode attributes for required values (app name / app id, etc..)
+	if (!isset($form_app) || !isset($discovery_source_app) || !isset($discovery_source_item) || $discovery_source_item == '') 
+		return $os_error['missing_app'] . $content;
+
+	// apps check here
+	if ( $form_app ){
+		try{
+			$credentials = array();
+			$credentials['username'] = PODIOUSERNAME;
+			$credentials['password'] = PODIOPASSWORD;
+			Podio::authenticate('password', $credentials);
+
+			// get leads app podio webform and generate custom html/css styles
+			$podioforms = PodioForm::get_for_app($form_app);
+			$fields = $podioforms[0]->fields;
+
+			// form must not be empty (must have at least 1 field)
+			if (count($fields) > 0){
+				// start form tags
+				if (!isset($ga_action) && $ga_action != '')
+					$form_html .= '<div class="span12"><form class="os_podioform" method="POST" action="javascript: checkForm()" ><fieldset>';
+				else
+					$form_html .= '<div class="span12"><form class="os_podioform" id="'.$ga_action.'" method="POST" action="javascript: checkForm()" ><fieldset>';
+
+				foreach ($fields as $field){
+					$field_id = $field['field_id'];
+					// checking settings field for 'contact_field_types' array (to generate textbox for app field type 'contact')
+					if (!empty($field['settings']['contact_field_types'])) $contact_field_types = $field['settings']['contact_field_types'];
+
+					// get list of podio app object
+					$appfield_object = PodioAppField::get($form_app, $field_id);
+
+					$att = $appfield_object->__attributes;	// grab list of form fields
+					$external_id = $att['external_id'];
+					$type = $att['type'];
+					$label = $att['config']['label'];
+					if (!empty($att['config']['settings']['required'])) $required = $att['config']['settings']['required']; else $required = '';
+
+					// generate form fields based on appfield type
+					switch ($type){
+						case 'text' : 
+						$size = $att['config']['settings']['size'];
+						// Large size text is a textarea
+						if ( stripos('large', $size) !== false ){
+							$desc_text = '<label style="text-transform:capitalize;">' . 'How Can We Help?' . '</label>';
+							$desc_text .= '<textarea name="'.$field_id.'" style="width:95%;" required></textarea>';
+						}
+						break;
+						case 'contact' :
+						if (isset($contact_field_types)){
+								// print_r($contact_field_types);
+							foreach ($contact_field_types as $contact_label){
+								// Add e to show email instead of mail
+								if ( stripos('mail', $contact_label) !== false )
+									$form_html .= '<label style="text-transform:capitalize;">e' . $contact_label . '</label>';
+								// Show custom text for organization
+								else if ( stripos('organization', $contact_label) !== false )
+									$form_html .= '<label style="text-transform:capitalize;">' . 'Company' . '</label>';
+								else
+									$form_html .= '<label style="text-transform:capitalize;">' . $contact_label . '</label>';
+
+								$form_html .= '<input type="text" name="contact['.$contact_label.']" style="width:95%;" required/>';
+							}
+						}
+						break;
+						case 'app' :
+						if ($label == 'Discovery Source') {
+							$form_html .= '<input type="hidden" name="'.$label.'" value="'.$field_id.'" />';
+						}
+						break;
+					}
+				}
+
+				// Only show textarea for contact forms
+				if ($discovery_source_item == 'none')
+					$form_html .= $desc_text;
+
+				// Setup for callback.php
+				$form_html .= '<input type="hidden" name="os_podio_app_id" value="'.$form_app.'" />';
+				$form_html .= '<input type="hidden" name="discovery_source_app" value="'.$discovery_source_app.'" />';
+				$form_html .= '<input type="hidden" name="discovery_source_item" value="'.$discovery_source_item.'" />';
+				if ($download_link != 'none')
+					$form_html .= '<input type="hidden" name="download_link" value="'.$download_link.'" />';
+
+				$form_html .= '<input class="os-btn btn-large os-green" type="submit" value="'.$submit_text.'" />';
+				// close form tags
+				$form_html .= '</fieldset></form></div>';
+				return $form_html;
+			}
+		}
+		catch(PodioError $e){
+			// printr($e);
+			return "Error showing the form";
+		}
+	}
+}
+add_shortcode('product_demo_form', 'product_demo_form');
+
+add_action('wp_enqueue_scripts', 'product_demo_javascript');
+function product_demo_javascript() {
+?>
+<script type="text/javascript">
+var checkForm = function(){
+	var ajaxurl = '<?php echo admin_url("admin-ajax.php"); ?>';
+	var form = $(".os_podioform :input");
+	var fields_array = ["Discovery Source", "contact[mail]", "contact[name]", "contact[organization]", "contact[phone]", "contact[title]", "discovery_source_app", "discovery_source_item", "download_link", "os_podio_app_id"];
+	var data = {action: 'podio_whitepaper'};
+
+	$.each(fields_array, function(index, value){
+		data[(form[index]).name] = $(form[index]).val();
+	});
+
+	// $(".os_podioform :input").each(function(){
+	// 	data[this.name] = $(this).val();
+	// });
+	$.post(ajaxurl, data, function(response) {
+		console.log(response);
+		if (response == 'Success')
+			$(".alert-success").fadeIn();
+		else
+			$(".alert-error").fadeIn();
+	}).fail(function() {
+		$(".alert-success").hide();
+		$(".alert-error").fadeIn();
+	});
+
+	if ($('[name="download_link"]').length) {
+		window.open('files/'+$('[name="download_link"]').val(),'_blank');
+		if ($('.os_podioform')[0].id.length)
+			_gaq.push(['_trackEvent', 'download', $('.os_podioform')[0].id, $('[name="download_link"]').val(),, false]);
+		else
+			_gaq.push(['_trackEvent', 'download', 'pdf', $('[name="download_link"]').val(),, false]);
+	} else {
+		_gaq.push(['_trackEvent', 'contact', 'submit', 'form',, false]);
+	}
+};
+</script>
+<?php
+}
+
+}
+
 ?>
