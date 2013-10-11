@@ -272,28 +272,21 @@ if (isset($_POST)){
 
 // ----------------------------------------------------------------
 
-// Shortcode 
+// Shortcode for product demo registration form
 if(!function_exists('product_demo_form')) {
 function product_demo_form($atts, $content = null){
 	global $os_error;
 
-	// return error if there no attributes
-	if (empty($atts)) return $os_error['missing_attributes'] . $content;
-
 	extract($atts);
 	extract(shortcode_atts( 
-		array('form_app' => OS_PODIO_LEADS_APP,
-			'discovery_source_app' => OS_PODIO_SOURCE_APP,
-			'discovery_source_item' => 'none', //none means this is a contact form instead of whitepapers
+		array('form_app' => OS_PODIO_PRODUCT_DEMO_APP,
 			'download_link' => 'none',
 			'submit_text' => 'Submit',
 			'ga_action' => ''), $atts));
 
 	$form_html = '';
-
-	// check shortcode attributes for required values (app name / app id, etc..)
-	if (!isset($form_app) || !isset($discovery_source_app) || !isset($discovery_source_item) || $discovery_source_item == '') 
-		return $os_error['missing_app'] . $content;
+	$category = '';
+	$desc_text = '';
 
 	// apps check here
 	if ( $form_app ){
@@ -311,9 +304,9 @@ function product_demo_form($atts, $content = null){
 			if (count($fields) > 0){
 				// start form tags
 				if (!isset($ga_action) && $ga_action != '')
-					$form_html .= '<div class="span12"><form class="os_podioform" method="POST" action="javascript: checkForm()" ><fieldset>';
+					$form_html .= '<div class="span12"><form class="os_podioform" method="POST" action="javascript: checkForm(this)" ><fieldset>';
 				else
-					$form_html .= '<div class="span12"><form class="os_podioform" id="'.$ga_action.'" method="POST" action="javascript: checkForm()" ><fieldset>';
+					$form_html .= '<div class="span12"><form class="os_podioform" id="'.$ga_action.'" method="POST" action="javascript: checkForm(this)" ><fieldset>';
 
 				foreach ($fields as $field){
 					$field_id = $field['field_id'];
@@ -322,7 +315,7 @@ function product_demo_form($atts, $content = null){
 
 					// get list of podio app object
 					$appfield_object = PodioAppField::get($form_app, $field_id);
-
+// printr($appfield_object);
 					$att = $appfield_object->__attributes;	// grab list of form fields
 					$external_id = $att['external_id'];
 					$type = $att['type'];
@@ -335,26 +328,22 @@ function product_demo_form($atts, $content = null){
 						$size = $att['config']['settings']['size'];
 						// Large size text is a textarea
 						if ( stripos('large', $size) !== false ){
-							$desc_text = '<label style="text-transform:capitalize;">' . 'How Can We Help?' . '</label>';
+							$desc_text .= '<label style="text-transform:capitalize;">' . $label . '</label>';
 							$desc_text .= '<textarea name="'.$field_id.'" style="width:95%;" required></textarea>';
+						} else if ( stripos('small', $size) !== false ) {
+				    		$form_html .= '<div class="textbox">
+					    	<label for="'.$label.'">'.$label.'</label><br />
+							<input type="text" name="'.$external_id.'" required value="'.$previous_value.'" /><br />
+							</div>';
 						}
 						break;
-						case 'contact' :
-						if (isset($contact_field_types)){
-								// print_r($contact_field_types);
-							foreach ($contact_field_types as $contact_label){
-								// Add e to show email instead of mail
-								if ( stripos('mail', $contact_label) !== false )
-									$form_html .= '<label style="text-transform:capitalize;">e' . $contact_label . '</label>';
-								// Show custom text for organization
-								else if ( stripos('organization', $contact_label) !== false )
-									$form_html .= '<label style="text-transform:capitalize;">' . 'Company' . '</label>';
-								else
-									$form_html .= '<label style="text-transform:capitalize;">' . $contact_label . '</label>';
-
-								$form_html .= '<input type="text" name="contact['.$contact_label.']" style="width:95%;" required/>';
-							}
+						case 'category' :
+						$category .= '<label>'.$label.'</label>';
+						$category .= '<ul style="list-style-type: none;">';
+						foreach ($att['config']['settings']['options'] as $key => $value) {
+							$category .= '<li><label><input id='.$field_id.' type="checkbox" value='.$value['id'].'>'.$value['text'].'</label></li>';
 						}
+						$category .= '</ul>';
 						break;
 						case 'app' :
 						if ($label == 'Discovery Source') {
@@ -364,14 +353,11 @@ function product_demo_form($atts, $content = null){
 					}
 				}
 
-				// Only show textarea for contact forms
-				if ($discovery_source_item == 'none')
-					$form_html .= $desc_text;
+				$form_html .= $desc_text;
+				$form_html .= $category;
 
 				// Setup for callback.php
 				$form_html .= '<input type="hidden" name="os_podio_app_id" value="'.$form_app.'" />';
-				$form_html .= '<input type="hidden" name="discovery_source_app" value="'.$discovery_source_app.'" />';
-				$form_html .= '<input type="hidden" name="discovery_source_item" value="'.$discovery_source_item.'" />';
 				if ($download_link != 'none')
 					$form_html .= '<input type="hidden" name="download_link" value="'.$download_link.'" />';
 
@@ -393,9 +379,9 @@ add_action('wp_enqueue_scripts', 'product_demo_javascript');
 function product_demo_javascript() {
 ?>
 <script type="text/javascript">
-var checkForm = function(){
+var checkForm = function(form){
 	var ajaxurl = '<?php echo admin_url("admin-ajax.php"); ?>';
-	var form = $(".os_podioform :input");
+	// var form = $(".os_podioform :input");
 	var fields_array = ["Discovery Source", "contact[mail]", "contact[name]", "contact[organization]", "contact[phone]", "contact[title]", "discovery_source_app", "discovery_source_item", "download_link", "os_podio_app_id"];
 	var data = {action: 'podio_whitepaper'};
 

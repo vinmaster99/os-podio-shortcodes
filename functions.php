@@ -6,7 +6,7 @@ function register_styles_scripts(){
 add_action( 'wp_enqueue_scripts', 'register_styles_scripts' );
 
 // main test/printing function
-if (!function_exists('test')){
+if (!function_exists('printr')){
 	function printr($array){
 	  echo '<pre>';
 	  print_r($array);
