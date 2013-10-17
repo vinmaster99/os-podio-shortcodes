@@ -277,14 +277,15 @@ if(!function_exists('product_demo_form')) {
 function product_demo_form($atts, $content = null){
 	global $os_error;
 
-	extract($atts);
 	extract(shortcode_atts( 
 		array('form_app' => OS_PODIO_PRODUCT_DEMO_APP,
 			'download_link' => 'none',
 			'submit_text' => 'Submit',
-			'ga_action' => '',
+			'ga_label' => '',
+			'form_id' => '0',
 			'discovery_source_app' => OS_PODIO_SOURCE_APP,
-			'discovery_source_item' => 'none',), $atts));
+			'discovery_source_item' => 'none',
+			'workshop_num' => '1'), $atts));
 
 	$form_html = '';
 	$category = '';
@@ -305,10 +306,10 @@ function product_demo_form($atts, $content = null){
 			// form must not be empty (must have at least 1 field)
 			if (count($fields) > 0){
 				// start form tags
-				if (!isset($ga_action) && $ga_action != '')
-					$form_html .= '<div class="span12"><form class="os_podioform" method="POST" onsubmit="checkForm(this); return false;" ><fieldset>';
+				if (!isset($ga_label) || $ga_label == '')
+					$form_html .= '<div class="span12"><form class="os_podioform_'.$form_id.'" method="POST" onsubmit="checkForm(this); return false;" ><fieldset>';
 				else
-					$form_html .= '<div class="span12"><form class="os_podioform" id="'.$ga_action.'" method="POST" onsubmit="checkForm(this); return false;" ><fieldset>';
+					$form_html .= '<div class="span12"><form class="os_podioform_'.$form_id.'" id="'.$ga_label.'" method="POST" onsubmit="checkForm(this); return false;" ><fieldset>';
 
 				foreach ($fields as $field){
 					$field_id = $field['field_id'];
@@ -331,7 +332,7 @@ function product_demo_form($atts, $content = null){
 						// Large size text is a textarea
 						if ( stripos('large', $size) !== false ){
 							$desc_text .= '<label style="text-transform:capitalize;">' . $label . '</label>';
-							$desc_text .= '<textarea name="'.$field_id.'" style="width:95%;" required></textarea>';
+							$desc_text .= '<textarea id="44395412" name="'.$field_id.'" style="width:95%;" required></textarea>';
 						} else if ( stripos('small', $size) !== false ) {
 				    		$form_html .= '<div class="textbox">
 					    	<label for="'.$label.'">'.$label.'</label><br />
@@ -343,13 +344,13 @@ function product_demo_form($atts, $content = null){
 						$category .= '<label>'.$label.'</label>';
 						$category .= '<ul style="list-style-type: none;">';
 						foreach ($att['config']['settings']['options'] as $key => $value) {
-							$category .= '<li><label><input id='.$field_id.' type="checkbox" value='.$value['id'].'>'.$value['text'].'</label></li>';
+							$category .= '<li><label><input name="'.$external_id.'" id='.$field_id.' type="checkbox" value='.$value['id'].'>'.$value['text'].'</label></li>';
 						}
 						$category .= '</ul>';
 						break;
 						case 'app' :
 						if ($label == 'Webinar Source:') {
-							$form_html .= '<input type="hidden" name="'.$label.'" value="'.$field_id.'" />';
+							$form_html .= '<input type="hidden" name="'.$field_id.'" value="'.$form_app.'" />';
 						}
 						break;
 					}
@@ -359,9 +360,9 @@ function product_demo_form($atts, $content = null){
 				$form_html .= $category;
 
 				// Setup for callback.php
-				$form_html .= '<input type="hidden" name="os_podio_app_id" value="'.$form_app.'" />';
 				$form_html .= '<input type="hidden" name="discovery_source_app" value="'.$discovery_source_app.'" />';
 				$form_html .= '<input type="hidden" name="discovery_source_item" value="'.$discovery_source_item.'" />';
+				$form_html .= '<input type="hidden" name="workshop_num" value="'.$workshop_num.'" />';
 				$form_html .= '<input class="os-btn btn-large os-green" type="submit" value="'.$submit_text.'" />';
 				// close form tags
 				$form_html .= '</fieldset></form></div>';
@@ -382,17 +383,16 @@ function product_demo_javascript() {
 <script type="text/javascript">
 var checkForm = function(form){
 	var ajaxurl = '<?php echo admin_url("admin-ajax.php"); ?>';
-	// var form = $(".os_podioform :input");
-	var fields_array = ["Webinar Source:", "first-name", "last-name", "title", "company", "work-email", "work-phone", "44395412", "os_podio_app_id", "discovery_source_app", "discovery_source_item"];
+	var fields_array = ["Webinar Source:", "first-name", "last-name", "title", "company", "work-email", "work-phone", "44395412", "44578450", "discovery_source_app", "discovery_source_item"];
 	var data = {action: 'product_demo'};
 
 	$.each(fields_array, function(index, value){
-		data[(form[index]).name] = $(form[index]).val();
+		if (form[value] != undefined && form[value].name != undefined)
+			data[(form[value]).name] = $(form[value]).val();
 	});
+	data['44580179'] = 1;
 	console.log(data);
-	// $(".os_podioform :input").each(function(){
-	// 	data[this.name] = $(this).val();
-	// });
+
 	$.post(ajaxurl, data, function(response) {
 		console.log('response: '+JSON.stringify(response));
 		if (response == 'Success')
@@ -404,14 +404,10 @@ var checkForm = function(form){
 		$(".alert-error").fadeIn();
 	});
 
-	// if ($('[name="download_link"]').length) {
-	// 	if ($('.os_podioform')[0].id.length)
-	// 		_gaq.push(['_trackEvent', 'download', $('.os_podioform')[0].id, $('[name="download_link"]').val(),, false]);
-	// 	else
-	// 		_gaq.push(['_trackEvent', 'download', 'pdf', $('[name="download_link"]').val(),, false]);
-	// } else {
-	// 	_gaq.push(['_trackEvent', 'contact', 'submit', 'form',, false]);
-	// }
+	// if ($('.os_podioform')[0].id.length)
+	// 	_gaq.push(['_trackEvent', 'workshops', 'register', form.id,, false]);
+	// else
+	// 	_gaq.push(['_trackEvent', 'workshops', 'register', 'ga_label',, false]);
 };
 </script>
 <?php
@@ -464,8 +460,8 @@ if (isset($_POST)){
 				$discovery_source_app = $value;
 			} else if ($key == 'discovery_source_item') {
 				$discovery_source_item = $value;
-			} else if ($key == 'Discovery_Source') {
-				$discovery_source_field_id = $value;
+			} else if ($key == 'workshop_num') {
+				$workshop_num = $value;
 			} else {
 				// add value to args array
 				$args['fields'][$key] = $value;
@@ -483,14 +479,22 @@ if (isset($_POST)){
 		$discovery_source_item_id = $attributes['item_id'];
 	}
 
-	printr($discovery_source_item_id);
+	Podio::authenticate('app', array('app_id'=>OS_PODIO_PRODUCT_DEMO_APP,'app_token'=>OS_PODIO_PRODUCT_DEMO_APP_TOKEN));
 
+	$temp = PodioItem::get_by_app_item_id('5704030','1');
+	$temp2 = ($temp->__attributes['fields'][6]->__attributes['values']);
+	foreach ($temp2 as $key => $value) {
+		printr($value);
+	}
+	// printr($temp);
 	try{
 		Podio::authenticate('app', array('app_id'=>OS_PODIO_PRODUCT_DEMO_APP,'app_token'=>OS_PODIO_PRODUCT_DEMO_APP_TOKEN));
-
+		$app_id = OS_PODIO_PRODUCT_DEMO_APP;
 		if (isset($app_id)){
 			if ($discovery_source_item != 'none') // reference for discovery source
-				$args['fields'][$discovery_source_field_id] = $discovery_source_item_id;
+				$args['fields']['webinar-source3'] = $discovery_source_item_id;
+				$categories = array('value'=>$workshop_num);
+				$args['fields']['44580179'] = $categories;
 			// Create item
 			$item_id = PodioItem::create($app_id, $args);
 			echo "Success";
@@ -498,6 +502,7 @@ if (isset($_POST)){
 		}
  	}
 	catch(PodioError $e){
+		printr($e);
 		echo "Error submitting form";
 		die();
 	}
