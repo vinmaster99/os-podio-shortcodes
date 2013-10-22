@@ -307,9 +307,9 @@ function product_demo_form($atts, $content = null){
 			if (count($fields) > 0){
 				// start form tags
 				if (!isset($ga_label) || $ga_label == '')
-					$form_html .= '<div class="span12"><form class="os_podioform_'.$form_id.'" method="POST" onsubmit="checkForm(this); return false;" ><fieldset>';
+					$form_html .= '<div class="span12"><form class="os_podioform_'.$form_id.'" method="POST" onsubmit="checkFormProduct(this); return false;" ><fieldset>';
 				else
-					$form_html .= '<div class="span12"><form class="os_podioform_'.$form_id.'" id="'.$ga_label.'" method="POST" onsubmit="checkForm(this); return false;" ><fieldset>';
+					$form_html .= '<div class="span12"><form class="os_podioform_'.$form_id.'" id="'.$ga_label.'" method="POST" onsubmit="checkFormProduct(this); return false;" ><fieldset>';
 
 				foreach ($fields as $field){
 					$field_id = $field['field_id'];
@@ -340,14 +340,14 @@ function product_demo_form($atts, $content = null){
 							</div>';
 						}
 						break;
-						case 'category' :
-						$category .= '<label>'.$label.'</label>';
-						$category .= '<ul style="list-style-type: none;">';
-						foreach ($att['config']['settings']['options'] as $key => $value) {
-							$category .= '<li><label><input name="'.$external_id.'" id='.$field_id.' type="checkbox" value='.$value['id'].'>'.$value['text'].'</label></li>';
-						}
-						$category .= '</ul>';
-						break;
+						// case 'category' :
+						// $category .= '<label>'.$label.'</label>';
+						// $category .= '<ul style="list-style-type: none;">';
+						// foreach ($att['config']['settings']['options'] as $key => $value) {
+						// 	$category .= '<li><label><input name="'.$external_id.'" id='.$field_id.' type="checkbox" value='.$value['id'].'>'.$value['text'].'</label></li>';
+						// }
+						// $category .= '</ul>';
+						// break;
 						case 'app' :
 						if ($label == 'Webinar Source:') {
 							$form_html .= '<input type="hidden" name="'.$field_id.'" value="'.$form_app.'" />';
@@ -381,9 +381,9 @@ add_action('wp_enqueue_scripts', 'product_demo_javascript');
 function product_demo_javascript() {
 ?>
 <script type="text/javascript">
-var checkForm = function(form){
+var checkFormProduct = function(form){
 	var ajaxurl = '<?php echo admin_url("admin-ajax.php"); ?>';
-	var fields_array = ["Webinar Source:", "first-name", "last-name", "title", "company", "work-email", "work-phone", "44395412", "44578450", "discovery_source_app", "discovery_source_item"];
+	var fields_array = ["Webinar Source:", "first-name", "last-name", "title", "company", "work-email", "work-phone", "44395412", "44578450", "discovery_source_app", "discovery_source_item", "workshop_num"];
 	var data = {action: 'product_demo'};
 
 	$.each(fields_array, function(index, value){
@@ -404,10 +404,10 @@ var checkForm = function(form){
 		$(".alert-error").fadeIn();
 	});
 
-	// if ($('.os_podioform')[0].id.length)
-	// 	_gaq.push(['_trackEvent', 'workshops', 'register', form.id,, false]);
-	// else
-	// 	_gaq.push(['_trackEvent', 'workshops', 'register', 'ga_label',, false]);
+	if ($('.os_podioform')[0].id.length)
+		_gaq.push(['_trackEvent', 'workshops', 'register', form.id,, false]);
+	else
+		_gaq.push(['_trackEvent', 'workshops', 'register', 'ga_label',, false]);
 };
 </script>
 <?php
@@ -479,22 +479,22 @@ if (isset($_POST)){
 		$discovery_source_item_id = $attributes['item_id'];
 	}
 
-	Podio::authenticate('app', array('app_id'=>OS_PODIO_PRODUCT_DEMO_APP,'app_token'=>OS_PODIO_PRODUCT_DEMO_APP_TOKEN));
+	// Podio::authenticate('app', array('app_id'=>OS_PODIO_PRODUCT_DEMO_APP,'app_token'=>OS_PODIO_PRODUCT_DEMO_APP_TOKEN));
 
-	$temp = PodioItem::get_by_app_item_id('5704030','1');
-	$temp2 = ($temp->__attributes['fields'][6]->__attributes['values']);
-	foreach ($temp2 as $key => $value) {
-		printr($value);
-	}
-	// printr($temp);
+	// $temp = PodioItem::get_by_app_item_id('5704030','1');
+	// $temp2 = ($temp->__attributes['fields'][6]->__attributes['values']);
+	// foreach ($temp2 as $key => $value) {
+	// 	printr($value);
+	// }
+	// printr($workshop_num);
 	try{
 		Podio::authenticate('app', array('app_id'=>OS_PODIO_PRODUCT_DEMO_APP,'app_token'=>OS_PODIO_PRODUCT_DEMO_APP_TOKEN));
 		$app_id = OS_PODIO_PRODUCT_DEMO_APP;
-		if (isset($app_id)){
+		if (isset($app_id) && isset($workshop_num)){
 			if ($discovery_source_item != 'none') // reference for discovery source
 				$args['fields']['webinar-source3'] = $discovery_source_item_id;
-				$categories = array('value'=>$workshop_num);
-				$args['fields']['44580179'] = $categories;
+				// $categories = array('value'=>$workshop_num);
+				// $args['fields']['44580179'] = $categories;
 			// Create item
 			$item_id = PodioItem::create($app_id, $args);
 			echo "Success";
