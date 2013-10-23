@@ -21,6 +21,7 @@ function onescreen_podioform($atts, $content = null){
 		array('form_app' => OS_PODIO_LEADS_APP,
 			'discovery_source_app' => OS_PODIO_SOURCE_APP,
 			'discovery_source_item' => 'none', //none means this is a contact form instead of whitepapers
+			'contact_form' => 'no',
 			'download_link' => 'none',
 			'submit_text' => 'Submit',
 			'ga_action' => ''), $atts));
@@ -101,7 +102,7 @@ function onescreen_podioform($atts, $content = null){
 				}
 
 				// Only show textarea for contact forms
-				if ($discovery_source_item == 'none')
+				if ($contact_form != 'no')
 					$form_html .= $desc_text;
 
 				// Setup for callback.php
