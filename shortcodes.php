@@ -145,24 +145,37 @@ var checkForm = function(){
 	// });
 	$.post(ajaxurl, data, function(response) {
 		console.log(response);
-		if (response == 'Success')
+		if (response.indexOf('Success') !== -1) {
 			$(".alert-success").fadeIn();
+			if ($('[name="download_link"]').length) {
+				window.open('files/'+$('[name="download_link"]').val(),'_blank');
+				if ($('.os_podioform')[0].id.length) {
+					queries = response.split("&");
+					params = [];
+					for ( i = 0, l = queries.length; i < l; i++ ) {
+					  temp = queries[i].split('=');
+					  if (temp.length > 1)
+					    params[temp[0]] = temp[1];
+					}
+					if (params['item_id'] !== undefined) {
+						_gaq.push(['_trackEvent', $('.os_podioform')[0].id, $('[name="download_link"]').val(), params['item_id'], , false]);
+						console.log('fired');
+					}
+					else
+						_gaq.push(['_trackEvent', $('.os_podioform')[0].id, $('[name="download_link"]').val(), 'Podio item not created',, false]);
+				}
+				else
+					_gaq.push(['_trackEvent', 'download', 'pdf', $('[name="download_link"]').val(),, false]);
+			} else {
+				_gaq.push(['_trackEvent', 'contact', 'submit', 'form',, false]);
+			}
+		}
 		else
 			$(".alert-error").fadeIn();
 	}).fail(function() {
 		$(".alert-success").hide();
 		$(".alert-error").fadeIn();
 	});
-
-	if ($('[name="download_link"]').length) {
-		window.open('files/'+$('[name="download_link"]').val(),'_blank');
-		if ($('.os_podioform')[0].id.length)
-			_gaq.push(['_trackEvent', 'download', $('.os_podioform')[0].id, $('[name="download_link"]').val(),, false]);
-		else
-			_gaq.push(['_trackEvent', 'download', 'pdf', $('[name="download_link"]').val(),, false]);
-	} else {
-		_gaq.push(['_trackEvent', 'contact', 'submit', 'form',, false]);
-	}
 };
 </script>
 <?php
@@ -255,7 +268,8 @@ if (isset($_POST)){
 				$args['fields'][$discovery_source_field_id] = $discovery_source_item_id;
 			// Create item
 			$item_id = PodioItem::create($app_id, $args);
-			echo "Success";
+			$link = PodioItem::get($item_id)->__attributes['link'];
+			echo "Success&item_id=".$link;
 			die();
 		}
  	}
@@ -270,6 +284,19 @@ if (isset($_POST)){
 }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ----------------------------------------------------------------
 
@@ -392,23 +419,31 @@ var checkFormProduct = function(form){
 			data[(form[value]).name] = $(form[value]).val();
 	});
 	data['44580179'] = 1;
-	console.log(data);
 
 	$.post(ajaxurl, data, function(response) {
-		console.log('response: '+JSON.stringify(response));
-		if (response == 'Success')
+		// console.log('response: '+JSON.stringify(response));
+		console.log('response: '+response);
+		if (response.indexOf('Success') !== -1) {
 			$(".alert-success").fadeIn();
+			queries = response.split("&");
+			params = [];
+			for ( i = 0, l = queries.length; i < l; i++ ) {
+			  temp = queries[i].split('=');
+			  if (temp.length > 1)
+			    params[temp[0]] = temp[1];
+			}
+			if ($('.os_podioform')[0].id.length) {
+				_gaq.push(['_trackEvent', 'workshops', 'register', form.id,params['item_id'], false]);
+			}
+			else
+				_gaq.push(['_trackEvent', 'workshops', 'register', 'ga_label',params['item_id'], false]);
+		}
 		else
 			$(".alert-error").fadeIn();
 	}).fail(function() {
 		$(".alert-success").hide();
 		$(".alert-error").fadeIn();
 	});
-
-	if ($('.os_podioform')[0].id.length)
-		_gaq.push(['_trackEvent', 'workshops', 'register', form.id,, false]);
-	else
-		_gaq.push(['_trackEvent', 'workshops', 'register', 'ga_label',, false]);
 };
 </script>
 <?php
@@ -498,7 +533,8 @@ if (isset($_POST)){
 				// $args['fields']['44580179'] = $categories;
 			// Create item
 			$item_id = PodioItem::create($app_id, $args);
-			echo "Success";
+			$link = PodioItem::get($item_id)->__attributes['link'];
+			echo "Success&item_id=".$link;
 			die();
 		}
  	}
