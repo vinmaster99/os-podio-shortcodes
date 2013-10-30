@@ -105,6 +105,7 @@ function onescreen_podioform($atts, $content = null){
 				if ($contact_form != 'no')
 					$form_html .= $desc_text;
 
+				$form_html .= recaptcha_get_html(RECAPTCHA_PUBLIC_KEY);
 				// Setup for callback.php
 				$form_html .= '<input type="hidden" name="os_podio_app_id" value="'.$form_app.'" />';
 				$form_html .= '<input type="hidden" name="discovery_source_app" value="'.$discovery_source_app.'" />';
@@ -387,6 +388,7 @@ function product_demo_form($atts, $content = null){
 				$form_html .= $desc_text;
 				$form_html .= $category;
 
+				$form_html .= recaptcha_get_html(RECAPTCHA_PUBLIC_KEY);
 				// Setup for callback.php
 				$form_html .= '<input type="hidden" name="discovery_source_app" value="'.$discovery_source_app.'" />';
 				$form_html .= '<input type="hidden" name="discovery_source_item" value="'.$discovery_source_item.'" />';
@@ -532,8 +534,8 @@ if (isset($_POST)){
 				// $categories = array('value'=>$workshop_num);
 				// $args['fields']['44580179'] = $categories;
 			// Create item
-			$item_id = PodioItem::create($app_id, $args);
-			$link = PodioItem::get($item_id)->__attributes['link'];
+			// $item_id = PodioItem::create($app_id, $args);
+			// $link = PodioItem::get($item_id)->__attributes['link'];
 			echo "Success&item_id=".$link;
 			die();
 		}
