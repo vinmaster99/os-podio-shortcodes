@@ -134,13 +134,14 @@ function podio_whitepaper_javascript() {
 var checkForm = function(){
 	var ajaxurl = '<?php echo admin_url("admin-ajax.php"); ?>';
 	var form = $(".os_podioform :input");
-	var fields_array = ["Discovery Source", "contact[mail]", "contact[name]", "contact[organization]", "contact[phone]", "contact[title]", "discovery_source_app", "discovery_source_item", "download_link", "os_podio_app_id"];
+	var fields_array = ["Discovery Source", "contact[mail]", "contact[name]", "contact[organization]", "contact[phone]", "contact[title]", "discovery_source_app", "discovery_source_item", "download_link", "os_podio_app_id", "recaptcha_response_field", "recaptcha_challenge_field"];
 	var data = {action: 'podio_whitepaper'};
 
 	$.each(fields_array, function(index, value){
 		data[(form[index]).name] = $(form[index]).val();
 	});
 
+	Recaptcha.reload();
 	// $(".os_podioform :input").each(function(){
 	// 	data[this.name] = $(this).val();
 	// });
@@ -171,6 +172,9 @@ var checkForm = function(){
 				_gaq.push(['_trackEvent', 'contact', 'submit', 'form',, false]);
 			}
 		}
+		else if (response.indexOf('recaptcha') !== -1) {
+			$("#recaptcha-error").fadeIn();
+		}
 		else
 			$(".alert-error").fadeIn();
 	}).fail(function() {
@@ -195,6 +199,14 @@ if (isset($_POST)){
 	$args = array();
 	$app_id;
 	$contact_args = array( );
+
+	$resp = recaptcha_check_answer (RECAPTCHA_PRIVATE_KEY,
+                                $_SERVER["REMOTE_ADDR"],
+                                $_POST["recaptcha_challenge_field"],
+                                $_POST["recaptcha_response_field"]);
+	if (!$resp->is_valid) {
+		die("Error recaptcha");
+	}
 
 	// get post values and set up args to send to podio
 	foreach ($_POST as $key => $value){
@@ -231,6 +243,10 @@ if (isset($_POST)){
 				$discovery_source_item = $value;
 			} else if ($key == 'Discovery_Source') {
 				$discovery_source_field_id = $value;
+			} else if ($key == 'recaptcha_response_field') {
+				// nothing
+			} else if ($key == 'recaptcha_challenge_field') {
+				// nothing
 			} else {
 				// add value to args array
 				$args['fields'][$key] = $value;
@@ -262,7 +278,6 @@ if (isset($_POST)){
 		$space_id = BUSINESS_DEV_WORKSPACE_ID;
 		// Create the contact and get contact id
 		$contact_id = PodioContact::create( $space_id, $contact_args );
-
 		if (isset($app_id) && isset($contact_id) && isset($discovery_source_item)){
 			$args['fields']['contact'] = $contact_id;
 			if ($discovery_source_item != 'none') // reference for discovery source
@@ -285,6 +300,11 @@ if (isset($_POST)){
 }
 
 }
+
+
+
+
+
 
 
 
@@ -388,7 +408,7 @@ function product_demo_form($atts, $content = null){
 				$form_html .= $desc_text;
 				$form_html .= $category;
 
-				$form_html .= recaptcha_get_html(RECAPTCHA_PUBLIC_KEY);
+				// $form_html .= recaptcha_get_html(RECAPTCHA_PUBLIC_KEY);
 				// Setup for callback.php
 				$form_html .= '<input type="hidden" name="discovery_source_app" value="'.$discovery_source_app.'" />';
 				$form_html .= '<input type="hidden" name="discovery_source_item" value="'.$discovery_source_item.'" />';
