@@ -146,8 +146,9 @@ var checkForm = function(){
 	// 	data[this.name] = $(this).val();
 	// });
 	$.post(ajaxurl, data, function(response) {
-		console.log(response);
+		// console.log(response);
 		if (response.indexOf('Success') !== -1) {
+			$(".os_podioform")[0].reset();
 			$(".alert-success").fadeIn();
 			if ($('[name="download_link"]').length) {
 				window.open('files/'+$('[name="download_link"]').val(),'_blank');
@@ -161,7 +162,6 @@ var checkForm = function(){
 					}
 					if (params['item_id'] !== undefined) {
 						_gaq.push(['_trackEvent', $('.os_podioform')[0].id, $('[name="download_link"]').val(), params['item_id'], , false]);
-						console.log('fired');
 					}
 					else
 						_gaq.push(['_trackEvent', $('.os_podioform')[0].id, $('[name="download_link"]').val(), 'Podio item not created',, false]);
