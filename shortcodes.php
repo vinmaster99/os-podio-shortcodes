@@ -24,7 +24,8 @@ function onescreen_podioform($atts, $content = null){
 			'contact_form' => 'no',
 			'download_link' => 'none',
 			'submit_text' => 'Submit',
-			'ga_action' => ''), $atts));
+			'ga_action' => '',
+			'recaptcha' => 'no'), $atts));
 
 	$form_html = '';
 
@@ -104,8 +105,8 @@ function onescreen_podioform($atts, $content = null){
 				// Only show textarea for contact forms
 				if ($contact_form != 'no')
 					$form_html .= $desc_text;
-
-				$form_html .= recaptcha_get_html(RECAPTCHA_PUBLIC_KEY);
+				if ($recaptcha != 'no')
+					$form_html .= recaptcha_get_html(RECAPTCHA_PUBLIC_KEY);
 				// Setup for callback.php
 				$form_html .= '<input type="hidden" name="os_podio_app_id" value="'.$form_app.'" />';
 				$form_html .= '<input type="hidden" name="discovery_source_app" value="'.$discovery_source_app.'" />';
@@ -138,15 +139,19 @@ var checkForm = function(){
 	var data = {action: 'podio_whitepaper'};
 
 	$.each(fields_array, function(index, value){
-		data[(form[index]).name] = $(form[index]).val();
+		if (form[index] != undefined)
+			data[(form[index]).name] = $(form[index]).val();
 	});
 
-	Recaptcha.reload();
+	if (typeof Recaptcha != "undefined")
+		Recaptcha.reload();
+	$(".alert-error").hide();
+	$(".alert-success").hide();
 	// $(".os_podioform :input").each(function(){
 	// 	data[this.name] = $(this).val();
 	// });
 	$.post(ajaxurl, data, function(response) {
-		// console.log(response);
+		console.log(response);
 		if (response.indexOf('Success') !== -1) {
 			$(".os_podioform")[0].reset();
 			$(".alert-success").fadeIn();
@@ -200,12 +205,14 @@ if (isset($_POST)){
 	$app_id;
 	$contact_args = array( );
 
-	$resp = recaptcha_check_answer (RECAPTCHA_PRIVATE_KEY,
-                                $_SERVER["REMOTE_ADDR"],
-                                $_POST["recaptcha_challenge_field"],
-                                $_POST["recaptcha_response_field"]);
-	if (!$resp->is_valid) {
-		die("Error recaptcha");
+	if (isset($_POST["recaptcha_challenge_field"])) {
+		$resp = recaptcha_check_answer (RECAPTCHA_PRIVATE_KEY,
+	                                $_SERVER["REMOTE_ADDR"],
+	                                $_POST["recaptcha_challenge_field"],
+	                                $_POST["recaptcha_response_field"]);
+		if (!$resp->is_valid) {
+			die("Error recaptcha");
+		}
 	}
 
 	// get post values and set up args to send to podio
@@ -554,8 +561,8 @@ if (isset($_POST)){
 				// $categories = array('value'=>$workshop_num);
 				// $args['fields']['44580179'] = $categories;
 			// Create item
-			// $item_id = PodioItem::create($app_id, $args);
-			// $link = PodioItem::get($item_id)->__attributes['link'];
+			$item_id = PodioItem::create($app_id, $args);
+			$link = PodioItem::get($item_id)->__attributes['link'];
 			echo "Success&item_id=".$link;
 			die();
 		}
